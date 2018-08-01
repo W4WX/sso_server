@@ -15,11 +15,11 @@
 syntax = "proto3";
 
 option java_multiple_files = true;
-option java_package = "io.grpc.examples.signup";
-option java_outer_classname = "SignupProto";
+option java_package = "io.grpc.examples.sso";
+option java_outer_classname = "SSOProto";
 option objc_class_prefix = "HLW";
 
-package signup;
+package sso;
 
 // The greeting service definition.
 service Signup {
@@ -36,6 +36,6 @@ message SignupRequest {
 
 // The response message containing the greetings
 message SignupReply {
-  string ret = 1;
+  int32 ret = 1;
   string msg = 2;
 }

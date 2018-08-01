@@ -5,6 +5,7 @@
 #include <string>
 #include <cstring>
 #include <memory>
+#include <regex>
 
 #include "bcrypt/BCrypt.hpp"
 
@@ -55,16 +56,22 @@ struct LoginHistory
     int status;      // 状态
 };
 
+struct Response
+{
+    int ret;
+    string msg;
+};
+
 DBPool connpool = DBPool::GetInstance();
 
-void Demo();
+// void Demo();
 
-int main(int argc, char *argv[])
-{
-    Demo();
+// int main(int argc, char *argv[])
+// {
+//     Demo();
 
-    return 0;
-}
+//     return 0;
+// }
 
 static UserInfo GetUserInfo(string userName)
 {
@@ -83,9 +90,6 @@ static UserInfo GetUserInfo(string userName)
     int updatecount = 0;
 
     /* initiate url, user, password and database variables */
-    string url(DBHOST);
-    const string user(USER);
-    const string password(PASSWORD);
     const string database(DATABASE);
 
     try
@@ -441,32 +445,94 @@ static LoginHistory getLoginHistory(string userID)
     }
 }
 
-void Demo()
+/**
+ * 注册
+ */
+static Response signupServer(string userName, string pwd)
+{
+    cout << "signupServer in..." << endl;
+    Response res;
+    res.ret = 0;
+    res.msg = "ok";
+    if (userName == "" && pwd == "")
+    {
+        cout << "signupServer in 0..." << endl;
+        res.ret = 101;
+        res.msg = "param error";
+        return res;
+    }
+    cout << "signupServer in 1..." << endl;
+    // regex eUser("[a-zA-Z]{8, 16}");
+    // if (!std::regex_match(userName, eUser))
+    // {
+    //     res.ret = 102;
+    //     res.msg = "userName not match request";
+    //     return res;
+    // }
+
+    // cout << "signupServer in 2..." << endl;
+    // regex ePwd("[\\S]{8, 16}");
+    // if (!std::regex_match(pwd, ePwd))
+    // {
+    //     res.ret = 103;
+    //     res.msg = "pwd not match complication";
+    //     return res;
+    // }
+    UserInfo user;
+    user = GetUserInfo(userName);
+
+    cout << "GetUserInfo user:" << user.userName << endl;
+    if (user.userName != "") {
+        res.ret = 104;
+        res.msg = "user has exist.";
+        return res;
+    }
+    user.userName = userName;
+    user.password = pwd;
+    user.status = 0;
+
+    res.ret = setUserInfo(user);
+
+    if (res.ret != 0)
+    {
+        res.msg = "signup fail.";
+    }
+
+    return res;
+}
+
+
+static void initDBPool()
 {
     connpool.initPool("tcp://127.0.0.1:3306", "root", PASSWORD, 100);
-
-    UserInfo b;
-    b.userName = "123";
-    b.password = "456";
-    b.status = 0;
-
-    b.password = BCrypt::generateHash(b.password, 12);
-
-    setUserInfo(b);
-
-    UserInfo u = GetUserInfo("123");
-
-    cout << "userName: " << u.userName << endl;
-    cout << "password: " << u.password << endl;
-    cout << "userID: " << u.id << endl;
-
-    LoginInfo testUser;
-    testUser.userName = u.userName;
-    testUser.password = "456";
-    testUser.deviceID = "test deviceID";
-
-    int isLogin = checkLogin(testUser);
-    cout << "checking login: " << isLogin << endl;
-
-    return;
 }
+
+// void Demo()
+// {
+//     connpool.initPool("tcp://127.0.0.1:3306", "root", PASSWORD, 100);
+
+//     UserInfo b;
+//     b.userName = "123";
+//     b.password = "456";
+//     b.status = 0;
+
+//     b.password = BCrypt::generateHash(b.password, 12);
+
+//     setUserInfo(b);
+
+//     UserInfo u = GetUserInfo("123");
+
+//     cout << "userName: " << u.userName << endl;
+//     cout << "password: " << u.password << endl;
+//     cout << "userID: " << u.id << endl;
+
+//     LoginInfo testUser;
+//     testUser.userName = u.userName;
+//     testUser.password = "456";
+//     testUser.deviceID = "test deviceID";
+
+//     int isLogin = checkLogin(testUser);
+//     cout << "checking login: " << isLogin << endl;
+
+//     return;
+// }

@@ -23,21 +23,26 @@
 #include <grpcpp/grpcpp.h>
 
 #include "sso.grpc.pb.h"
+#include "mysql.cpp"
 
 using grpc::Server;
 using grpc::ServerBuilder;
 using grpc::ServerContext;
 using grpc::Status;
-using signup::SignupRequest;
-using signup::SignupReply;
-using signup::Signup;
+using sso::SignupRequest;
+using sso::SignupReply;
+using sso::Signup;
 
 // Logic and data behind the server's behavior.
 class SignupServiceImpl final : public Signup::Service {
   Status signup(ServerContext *context, const SignupRequest *request,
                 SignupReply *reply) override {
-    std::string prefix("Hello ");
-    reply->set_message(prefix + request->userName());
+
+    Response res = signupServer(request->username(), request->password());
+
+    cout << "SignupServiceImpl after Response..." << endl;
+    reply->set_ret(res.ret);
+    reply->set_msg(res.msg);
     return Status::OK;
   }
 };
@@ -62,6 +67,7 @@ void RunServer() {
 }
 
 int main(int argc, char** argv) {
+  initDBPool();
   RunServer();
 
   return 0;
