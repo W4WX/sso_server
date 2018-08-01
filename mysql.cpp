@@ -5,10 +5,10 @@
 #include <string>
 #include <cstring>
 #include <memory>
-#include <regex>
 
 #include "bcrypt/BCrypt.hpp"
 
+#include <regex.h>
 #include "mysql_driver.h"
 #include "mysql_connection.h"
 #include "cppconn/driver.h"
@@ -462,22 +462,38 @@ static Response signupServer(string userName, string pwd)
         return res;
     }
     cout << "signupServer in 1..." << endl;
-    // regex eUser("[a-zA-Z]{8, 16}");
-    // if (!std::regex_match(userName, eUser))
-    // {
-    //     res.ret = 102;
-    //     res.msg = "userName not match request";
-    //     return res;
-    // }
 
-    // cout << "signupServer in 2..." << endl;
-    // regex ePwd("[\\S]{8, 16}");
-    // if (!std::regex_match(pwd, ePwd))
-    // {
-    //     res.ret = 103;
-    //     res.msg = "pwd not match complication";
-    //     return res;
-    // }
+    regex_t reg;                                                                //定义一个正则实例
+    const char *pattern = "^[a-zA-Z]{4,16}$";                                   //定义模式串
+    regcomp(&reg, pattern, REG_EXTENDED);                                       //编译正则模式串
+
+    const size_t nmatch = 1;                            //定义匹配结果最大允许数
+    regmatch_t pmatch[1];                               //定义匹配结果在待匹配串中的下标范围
+    int status = regexec(&reg, userName.c_str(), nmatch, pmatch, 0); //匹配他
+
+
+    cout << "signupServer in 2..." << endl;
+    if (status == REG_NOMATCH)
+    {
+        cout << "signupServer in 3..." << endl;
+        res.ret = 102;
+        res.msg = "userName not match request";
+        return res;
+    }
+
+    regex_t regPwd;
+    const char *patternPwd = "^[\\w\\S]{8,16}$";    //定义模式串
+    regcomp(&regPwd, patternPwd, REG_EXTENDED);  //编译正则模式串
+
+    status = regexec(&regPwd, pwd.c_str(), nmatch, pmatch, 0); //匹配他
+
+    if (status == REG_NOMATCH)
+    {
+        cout << "pwd: " << pwd << endl;
+        res.ret = 103;
+        res.msg = "pwd not match complication";
+        return res;
+    }
     UserInfo user;
     user = GetUserInfo(userName);
 
