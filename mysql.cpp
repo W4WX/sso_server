@@ -22,13 +22,13 @@
 #include "cppconn/exception.h"
 
 // #include <cpp_redis/cpp_redis>
-#include <hiredis/hiredis.h>
+// #include <hiredis/hiredis.h>
 
 #include "DBPool.h"
 
 #define DBHOST "tcp://127.0.0.1:3306"
 #define USER "root"
-#define PASSWORD "PASSWORD" // TODO
+#define PASSWORD "toor" // TODO
 #define DATABASE "test"
 
 #define NUMOFFSET 100
@@ -255,6 +255,8 @@ static int setRedisKey(string key, string value)
         return 1;
     }
     r->set(key, value);
+    r->expire(key, 900);
+    // redisCommand(r, "expire %s 900", key);
     printf("set redis key: %s value: %s\n", key.c_str(), value.c_str());
     printf("Get the %s is %s\n", key.c_str(), r->get(key).c_str());
     delete r;
@@ -578,7 +580,7 @@ static Response loginServer(string userName, string pwd, string device){
 
 static void initDBPool()
 {
-    connpool.initPool("tcp://127.0.0.1:3306", "root", PASSWORD, "test", 100);
+    connpool.initPool(DBHOST, USER, PASSWORD, DATABASE, 100);
 }
 
 // void Demo()
