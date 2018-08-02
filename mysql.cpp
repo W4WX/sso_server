@@ -6,6 +6,10 @@
 #include <cstring>
 #include <memory>
 
+#include <boost/uuid/uuid.hpp>
+#include <boost/uuid/uuid_io.hpp>
+#include <boost/uuid/uuid_generators.hpp>
+
 #include "bcrypt/BCrypt.hpp"
 
 #include <regex.h>
@@ -58,8 +62,9 @@ struct LoginHistory
 
 struct Response
 {
-    int ret;
-    string msg;
+    int ret = 0;
+    string msg = "OK";
+    string data;
 };
 
 DBPool connpool = DBPool::GetInstance();
@@ -105,7 +110,7 @@ static UserInfo GetUserInfo(string userName)
         cout << "\nDatabase connection/'s autocommit mode = " << con->getAutoCommit() << endl;
 
         /* select appropriate database schema */
-        con->setSchema(database);
+        // con->setSchema(database);
 
         cout << "Executing the Query: \"SELECT * FROM t_signup\" .." << endl;
 
@@ -154,6 +159,12 @@ static UserInfo GetUserInfo(string userName)
     }
 }
 
+static string getUUID (){
+    boost::uuids::uuid u = boost::uuids::random_generator()();
+
+    return to_string(u);
+}
+
 static int setUserInfo(UserInfo userInfo)
 {
     Statement *stmt;
@@ -184,7 +195,7 @@ static int setUserInfo(UserInfo userInfo)
         cout << "\nDatabase connection/'s autocommit mode = " << con->getAutoCommit() << endl;
 
         /* select appropriate database schema */
-        con->setSchema(database);
+        // con->setSchema(database);
 
         cout << "Executing the sql: " + sql + " .." << endl;
 
@@ -256,7 +267,11 @@ static int setLoginHistory(LoginHistory loginHis)
     PreparedStatement *prep_stmt;
     Connection *con;
     Savepoint *savept;
-    string sql = "insert into  t_login_his (`userID`, `userName`, `deviceID`, `status`) VALUES (?, ?, ?, ?)";
+    // "insert into  t_login_his (`userID`, `userName`, `deviceID`, `status`) VALUES (?, ?, ?, ?)";
+
+    // string sql = "INSERT INTO t_login_his (`userID`, `userName`, `deviceID`, `status`) SELECT ?, ?, ?, ? FROM dual WHERE not exists(select `userID` from t_login_his where userID = ? and deviceID = ?);select * from t_login_his;";
+
+    string sql = "call update_login(?, ?, ?, ?)";
 
     int updatecount = 0;
 
@@ -279,16 +294,24 @@ static int setLoginHistory(LoginHistory loginHis)
         cout << "\nDatabase connection/'s autocommit mode = " << con->getAutoCommit() << endl;
 
         /* select appropriate database schema */
-        con->setSchema(database);
+        // con->setSchema(database);
 
         cout << "Executing the sql: " + sql + " .." << endl;
 
         prep_stmt = con->prepareStatement(sql);
 
+        int ret;
+        // prep_stmt->setInt(1, loginHis.id);
+        // prep_stmt->setString(2, loginHis.deviceID);
+
         prep_stmt->setInt(1, loginHis.id);
         prep_stmt->setString(2, loginHis.userName);
         prep_stmt->setString(3, loginHis.deviceID);
         prep_stmt->setInt(4, loginHis.status);
+        // prep_stmt->setInt(5, loginHis.id);
+        // prep_stmt->setString(6, loginHis.deviceID);
+        // prep_stmt->setInt(7, loginHis.id);
+        // prep_stmt->setString(8, loginHis.deviceID);
         savept = con->setSavepoint("setLoginHistory");
 
         updatecount = prep_stmt->executeUpdate();
@@ -298,6 +321,11 @@ static int setLoginHistory(LoginHistory loginHis)
 
         cout << "\tCommitting outstanding updates to the database .." << endl;
         con->commit();
+
+        // res.reset(prep_stmt->executeQuery("SELECT @ret AS _ret"));
+        // while (res->next())
+        //     cout << "procedure ret: "
+        //          << res->getString("_ret") << endl;
 
         delete prep_stmt;
         connpool.ReleaseConnection(con);
@@ -329,12 +357,13 @@ static int setLoginHistory(LoginHistory loginHis)
     }
 }
 
-static int checkLogin(LoginInfo l)
+static Response checkLogin(LoginInfo l)
 {
-
+    Response res;
     if (l.userName == "" || l.password == "")
     {
-        return 1;
+        res.ret = 1;
+        return res;
     }
 
     UserInfo user = GetUserInfo(l.userName);
@@ -347,15 +376,18 @@ static int checkLogin(LoginInfo l)
         his.deviceID = l.deviceID;
         his.status = 0;
         setLoginHistory(his);
-        // todo 更新redis token
+        // 更新redis token
         string key = "user_" + to_string(user.id);
-        string value = to_string(rand()); // TODO 生成GUID
+        string value = getUUID(); // TODO 生成GUID
         setRedisKey(key, value);
 
-        return 0;
+        res.ret = 0;
+        res.data = value;
+        return res;
     }
     cout << "password invalid..." << endl;
-    return 1;
+    res.ret = 1;
+    return res;
 }
 
 static LoginHistory getLoginHistory(string userID)
@@ -397,7 +429,7 @@ static LoginHistory getLoginHistory(string userID)
         cout << "\nDatabase connection/'s autocommit mode = " << con->getAutoCommit() << endl;
 
         /* select appropriate database schema */
-        con->setSchema(database);
+        // con->setSchema(database);
 
         cout << "Executing the sql: " + sql + " .." << endl;
 
@@ -482,10 +514,11 @@ static Response signupServer(string userName, string pwd)
     }
 
     regex_t regPwd;
-    const char *patternPwd = "^[\\w\\S]{8,16}$";    //定义模式串
+    const char *patternPwd = "^.{8,16}$";    //定义模式串
+    regmatch_t pmatchPwd[1];
     regcomp(&regPwd, patternPwd, REG_EXTENDED);  //编译正则模式串
 
-    status = regexec(&regPwd, pwd.c_str(), nmatch, pmatch, 0); //匹配他
+    status = regexec(&regPwd, pwd.c_str(), nmatch, pmatchPwd, 0); //匹配他
 
     if (status == REG_NOMATCH)
     {
@@ -507,6 +540,8 @@ static Response signupServer(string userName, string pwd)
     user.password = pwd;
     user.status = 0;
 
+    user.password = BCrypt::generateHash(user.password, 12);
+
     res.ret = setUserInfo(user);
 
     if (res.ret != 0)
@@ -517,10 +552,33 @@ static Response signupServer(string userName, string pwd)
     return res;
 }
 
+static Response loginServer(string userName, string pwd, string device){
+    cout << "loginServer in..." << endl;
+    Response res;
+    res.ret = 0;
+    res.msg = "ok";
+
+    LoginInfo info;
+    info.userName = userName;
+    info.password = pwd;
+    info.deviceID = device;
+
+    Response isLogin = checkLogin(info);
+
+    if (isLogin.ret == 1)
+    {
+        res.ret = 106;
+        res.msg = "login fail.";
+        return res;
+    }
+
+    return isLogin;
+}
+
 
 static void initDBPool()
 {
-    connpool.initPool("tcp://127.0.0.1:3306", "root", PASSWORD, 100);
+    connpool.initPool("tcp://127.0.0.1:3306", "root", PASSWORD, "test", 100);
 }
 
 // void Demo()

@@ -21,11 +21,12 @@ DBPool& DBPool::GetInstance()
     return instance_;
 }
 
-void DBPool::initPool(std::string url_, std::string user_, std::string password_, int maxSize_)
+void DBPool::initPool(std::string url_, std::string user_, std::string password_, std::string schema_, int maxSize_)
 {
     this->user = user_;
     this->password = password_;
     this->url = url_;
+    this->schema = schema_;
     this->maxSize = maxSize_;
     this->curSize = 0;
 
@@ -68,9 +69,17 @@ void DBPool::InitConnection(int initSize)
 
 Connection* DBPool::CreateConnection()
 {
+    sql::ConnectOptionsMap connection_properties;
+
+    connection_properties["hostName"] = this->url;
+    connection_properties["userName"] = this->user;
+    connection_properties["password"] = this->password;
+    connection_properties["schema"] = this->schema;
+    // connection_properties["port"] = 3306;
+    connection_properties["CLIENT_MULTI_STATEMENTS"] = true;
     Connection* conn;
     try{
-        conn = driver->connect(this->url,this->user,this->password);  //create a conn
+        conn = driver->connect(connection_properties); //create a conn
         return conn;
     }
     catch(sql::SQLException& e)

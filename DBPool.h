@@ -29,7 +29,7 @@ public:
     static DBPool& GetInstance();
 
     //init pool
-    void initPool(std::string url_, std::string user_, std::string password_, int maxSize_);
+    void initPool(std::string url_, std::string user_, std::string password_, std::string schema_, int maxSize_);
 
     //get a conn from pool
     Connection* GetConnection();
@@ -58,6 +58,7 @@ private:
     string user;
     string password;
     string url;
+    string schema;
     int maxSize;
     int curSize;
 

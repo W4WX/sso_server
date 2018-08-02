@@ -28,7 +28,8 @@ using grpc::Channel;
 using grpc::ClientContext;
 using grpc::Status;
 using sso::SignupRequest;
-using sso::SignupReply;
+using sso::LoginRequest;
+using sso::SSOResponse;
 using sso::Signup;
 
 class SSOClient {
@@ -45,7 +46,7 @@ class SSOClient {
     request.set_password(pwd);
 
     // Container for the data we expect from the server.
-    SignupReply reply;
+    SSOResponse reply;
 
     // Context for the client. It could be used to convey extra information to
     // the server and/or tweak certain RPC behaviors.
@@ -66,20 +67,20 @@ class SSOClient {
 
   std::string Login(const std::string& user, const std::string& pwd, const std::string& deviceid) {
     // Data we are sending to the server.
-    SignupRequest request;
+    LoginRequest request;
     request.set_username(user);
     request.set_password(pwd);
     request.set_deviceid(deviceid);
 
     // Container for the data we expect from the server.
-    SignupReply reply;
+    SSOResponse reply;
 
     // Context for the client. It could be used to convey extra information to
     // the server and/or tweak certain RPC behaviors.
     ClientContext context;
 
     // The actual RPC.
-    Status status = stub_->signup(&context, request, &reply);
+    Status status = stub_->login(&context, request, &reply);
 
     // Act upon its status.
     if (status.ok()) {
@@ -116,6 +117,21 @@ int main(int argc, char** argv) {
   password = "12345678910";
   reply = ssoclient.Signup(username, password);
   std::cout << "signup received: " << reply << std::endl;
+
+  username = "world";
+  password = "123456789";
+  std::string deviceID("android x");
+  reply = ssoclient.Login(username, password, deviceID);
+  std::cout << "Login received: " << reply << std::endl;
+
+  password = "12345678910";
+  reply = ssoclient.Login(username, password, deviceID);
+  std::cout << "Login received: " << reply << std::endl;
+
+  deviceID = "iphone x";
+  password = "123456789";
+  reply = ssoclient.Login(username, password, deviceID);
+  std::cout << "Login received: " << reply << std::endl;
 
   return 0;
 }

@@ -30,15 +30,27 @@ using grpc::ServerBuilder;
 using grpc::ServerContext;
 using grpc::Status;
 using sso::SignupRequest;
-using sso::SignupReply;
+using sso::LoginRequest;
+using sso::SSOResponse;
 using sso::Signup;
 
 // Logic and data behind the server's behavior.
 class SignupServiceImpl final : public Signup::Service {
   Status signup(ServerContext *context, const SignupRequest *request,
-                SignupReply *reply) override {
+                SSOResponse *reply) override {
 
     Response res = signupServer(request->username(), request->password());
+
+    cout << "SignupServiceImpl after Response..." << endl;
+    reply->set_ret(res.ret);
+    reply->set_msg(res.msg);
+    return Status::OK;
+  }
+
+  Status login(ServerContext *context, const LoginRequest *request,
+                SSOResponse *reply) override {
+
+    Response res = loginServer(request->username(), request->password(), request->deviceid());
 
     cout << "SignupServiceImpl after Response..." << endl;
     reply->set_ret(res.ret);
