@@ -18,3 +18,14 @@ g++ -std=c++11 -L/usr/local/lib `pkg-config --libs protobuf grpc++ grpc` -I/usr/
 
 protoc -I protos --grpc_out=. --plugin=protoc-gen-grpc=`which grpc_cpp_plugin` protos/sso.proto
 protoc -I protos --cpp_out=. protos/sso.proto
+
+
+CREATE  PROCEDURE update_login (IN user_id INT(3),
+                              IN user_name VARCHAR(50),
+                              IN device_id VARCHAR(100),
+                              IN status INT(30))
+BEGIN
+    UPDATE t_login_his SET status=1 WHERE userID=user_id and deviceID <> device_id;
+    INSERT INTO t_login_his (`userID`, `userName`, `deviceID`, `status`) SELECT user_id, user_name, device_id, status FROM dual WHERE not exists(select `userID` from t_login_his as a where a.userID = user_id and a.deviceID = device_id);
+    UPDATE t_login_his SET status=0 WHERE userID=user_id and deviceID = device_id;
+END;
