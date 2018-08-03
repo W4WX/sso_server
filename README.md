@@ -2,9 +2,9 @@
 
 - [x] 更新MySQL连接池
 - [x] 连接redis
-- [ ] 逻辑调整
-- [ ] 生成GUID
-- [ ] 接入GRPC
+- [x] 逻辑调整
+- [x] 生成GUID
+- [x] 接入GRPC
 
 g++  -std=c++11 `/usr/local/mariadb/bin/mysql_config --cflags --libs` -I/root/_test/libbcrypt/include -I/usr/local/mariadb/include -I/usr/include/mysql/include/jdbc -L/usr/local/lib  -lcpp_redis -ltacopie -L/usr/lib64/mysql/lib64 -Wl,-rpath=/usr/lib64/mysql/lib64 -lhiredis -lbcrypt -lmysqlcppconn mysql.cpp DBPool.cpp -o mysql
 
@@ -19,7 +19,7 @@ g++ -std=c++11 -L/usr/local/lib `pkg-config --libs protobuf grpc++ grpc` -I/usr/
 protoc -I protos --grpc_out=. --plugin=protoc-gen-grpc=`which grpc_cpp_plugin` protos/sso.proto
 protoc -I protos --cpp_out=. protos/sso.proto
 
-
+登录存储过程
 CREATE  PROCEDURE update_login (IN user_id INT(3),
                               IN user_name VARCHAR(50),
                               IN device_id VARCHAR(100),
